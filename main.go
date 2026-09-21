@@ -1,14 +1,9 @@
 package main
 
 import (
-	"flag"
+	"SDP/src/abstractfactory"
+	"SDP/src/factorymethod"
 	"fmt"
-	"os"
-	"sort"
-	"strings"
-
-	"assignment2-design-patterns/src/abstractfactory"
-	"assignment2-design-patterns/src/factorymethod"
 )
 
 var baristas = map[string]func() factorymethod.Creator{
@@ -16,7 +11,6 @@ var baristas = map[string]func() factorymethod.Creator{
 	"latte":      factorymethod.NewLatteBarista,
 	"cappuccino": factorymethod.NewCappuccinoBarista,
 }
-
 var servingSets = map[string]func() abstractfactory.ServingSetFactory{
 	"classic": abstractfactory.NewClassicFactory,
 	"eco":     abstractfactory.NewEcoFactory,
@@ -24,45 +18,27 @@ var servingSets = map[string]func() abstractfactory.ServingSetFactory{
 }
 
 func main() {
-	drinkName := flag.String("drink", "espresso", "drink to brew: "+optionList(baristas))
-	brandName := flag.String("brand", "classic", "serving-set brand: "+optionList(servingSets))
-	customer := flag.String("customer", "Alex", "customer name")
-	flag.Parse()
-
-	newBarista, ok := baristas[*drinkName]
+	drinkName, brandName, customer := "latte", "classic", "Alex"
+	newBarista, ok := baristas[drinkName]
 	if !ok {
-		fail("drink", *drinkName, baristas)
+		fmt.Println("unknown drink:", drinkName, "(try espresso, latte or cappuccino)")
+		return
 	}
-
-	order := newBarista().ServeOrder(*customer)
+	newFactory, ok := servingSets[brandName]
+	if !ok {
+		fmt.Println("unknown brand:", brandName, "(try classic, eco or premium)")
+		return
+	}
+	order := newBarista().ServeOrder(customer)
 	fmt.Println("Factory Method:")
 	fmt.Print(order.Ticket)
-	newFactory, ok := servingSets[*brandName]
-	if !ok {
-		fail("brand", *brandName, servingSets)
-	}
-
 	counter := abstractfactory.NewCounter(newFactory())
 	packed, err := counter.Serve(order.Customer, order.Drink, order.Price)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "cannot pack the order:", err)
-		os.Exit(1)
+		fmt.Println("cannot pack the order:", err)
+		return
 	}
 	fmt.Println()
 	fmt.Println("Abstract Factory:")
 	fmt.Print(packed)
-}
-
-func optionList[T any](options map[string]T) string {
-	names := make([]string, 0, len(options))
-	for name := range options {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return strings.Join(names, ", ")
-}
-
-func fail[T any](kind, got string, options map[string]T) {
-	fmt.Fprintf(os.Stderr, "unknown %s %q (available: %s)\n", kind, got, optionList(options))
-	os.Exit(2)
 }

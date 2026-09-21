@@ -6,7 +6,6 @@ type Drink interface {
 	Price() float64
 	BrewSeconds() int
 }
-
 type espresso struct{}
 
 func (espresso) Name() string     { return "Espresso" }

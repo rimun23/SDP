@@ -1,3 +1,3 @@
-module assignment2-design-patterns
+module SDP
 
 go 1.20

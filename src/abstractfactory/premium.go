@@ -19,7 +19,6 @@ func (premiumLid) Describe() string { return "matte black lid with a silicone se
 type premiumReceipt struct{}
 
 func (premiumReceipt) Brand() string { return premiumBrand }
-
 func (premiumReceipt) Render(customer, item string, price float64) string {
 	return fmt.Sprintf("/*** %s ***/\n"+
 		"| Customer: %s\n"+
@@ -32,8 +31,7 @@ func (premiumReceipt) Render(customer, item string, price float64) string {
 
 type premiumFactory struct{}
 
-func NewPremiumFactory() ServingSetFactory { return premiumFactory{} }
-
+func NewPremiumFactory() ServingSetFactory    { return premiumFactory{} }
 func (premiumFactory) CreateCup() Cup         { return premiumCup{} }
 func (premiumFactory) CreateLid() Lid         { return premiumLid{} }
 func (premiumFactory) CreateReceipt() Receipt { return premiumReceipt{} }
