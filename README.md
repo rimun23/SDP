@@ -1,1 +1,1 @@
-chosen theme: coffee kiosk
+There project about notification for plants with bridge and adapter pattern, where adapter inside bridge pattern
