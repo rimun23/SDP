@@ -14,17 +14,17 @@ func main() {
 	}
 
 	readings := []Reading{
-		{"Фикус", 45},
-		{"Монстера", 30},
-		{"Кактус", 14},
-		{"Орхидея", 80},
+		{"Ficus", 45},
+		{"Monstera", 30},
+		{"Cactus", 14},
+		{"Orchid", 80},
 	}
 
 	for _, r := range readings {
 		alert := Route(r, channels)
 
 		if alert == nil {
-			fmt.Printf("%s: всё в порядке\n", r.Plant)
+			fmt.Printf("%s: Everything is fine\n", r.Plant)
 			continue
 		}
 
@@ -32,9 +32,9 @@ func main() {
 
 		if err := alert.Raise(
 			r.Plant,
-			fmt.Sprintf("Влажность %d%%.", r.Moisture),
+			fmt.Sprintf("Humidity %d%%.", r.Moisture),
 		); err != nil {
-			fmt.Println("ошибка:", err)
+			fmt.Println("Error:", err)
 			continue
 		}
 
