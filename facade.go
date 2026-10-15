@@ -115,8 +115,7 @@ func (a *AdminInspectionFacade) Inspect(regID string) {
 	if rec := a.repoC.Find(regID); rec != nil {
 		statC = rec.Status
 	}
-
-	fmt.Printf("\n--- PERSISTED STATE FOR %s ---\n", regID)
+	fmt.Printf("\nPERSISTED STATE FOR %s\n", regID)
 	fmt.Printf("Journal:      %v\n", logEntry["state"])
 	fmt.Printf("Subsystem A:  %s\n", statA)
 	fmt.Printf("Subsystem B:  %s\n", statB)
