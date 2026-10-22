@@ -21,7 +21,7 @@ func (sc *ScholarshipTuition) Calculate(s Student, credits int) float64 {
 type InternationalTuition struct{ rates ExchangeRateService }
 
 func (it *InternationalTuition) Calculate(s Student, credits int) float64 {
-	return (float64(credits) * 120.0 * it.rates.GetRate()) + 1000.0
+	return (float64(credits) * 12.0 * it.rates.GetRate()) + 1000.0
 }
 
 type TuitionContext struct{ strategy TuitionStrategy }

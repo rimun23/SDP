@@ -4,8 +4,8 @@ import "fmt"
 
 func main() {
 	rates := &SimulatedExchangeRateService{}
-	alice := Student{Name: "Alice", GPA: 3.2, Year: 3, IsInternational: true, HasScholarship: true}
-	credits := 3
+	alice := Student{Name: "Alice", GPA: 3.6, Year: 4, IsInternational: false, HasScholarship: true}
+	credits := 5
 	fmt.Println("1. Single Input Processed by All Tuition Strategies")
 	strats := []TuitionStrategy{
 		&StandardTuition{},

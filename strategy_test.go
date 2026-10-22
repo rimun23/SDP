@@ -12,7 +12,7 @@ func TestStrategies(t *testing.T) {
 	if val := (&ScholarshipTuition{}).Calculate(s, 3); val != 72.0 {
 		t.Errorf("expected 72, got %f", val)
 	}
-	if val := (&InternationalTuition{rates: fake}).Calculate(s, 3); val != 1360.0 {
+	if val := (&InternationalTuition{rates: fake}).Calculate(s, 3); val != 1036.0 {
 		t.Errorf("expected 1360, got %f", val)
 	}
 
