@@ -1,73 +1,38 @@
 package main
 
-import (
-	"SDP/subsystemA"
-	"SDP/subsystemB"
-	"SDP/subsystemC"
-	"bufio"
-	"fmt"
-	"os"
-	"strings"
-)
+import "fmt"
 
 func main() {
-	dir := "./"
-	repoA := subsystemA.NewIntakeRepository(dir)
-	repoB := subsystemB.NewSeatRepository(dir)
-	repoC := subsystemC.NewConfirmationRepository(dir)
-	allocB := subsystemB.NewSeatAllocator()
-	journal := &JournalStore{path: dir + "journal.json"}
-
-	studentFac := &StudentRegistrationFacade{
-		checker: &subsystemA.PrerequisiteChecker{},
-		repoA:   repoA,
-		allocB:  allocB,
-		repoB:   repoB,
-		billC:   &subsystemC.BillingSystem{},
-		repoC:   repoC,
-		journal: journal,
+	rates := &SimulatedExchangeRateService{}
+	alice := Student{Name: "Alice", GPA: 3.2, Year: 3, IsInternational: true, HasScholarship: true}
+	credits := 3
+	fmt.Println("1. Single Input Processed by All Tuition Strategies")
+	strats := []TuitionStrategy{
+		&StandardTuition{},
+		&ScholarshipTuition{},
+		&InternationalTuition{rates: rates},
 	}
-	adminFac := &AdminInspectionFacade{repoA: repoA, repoB: repoB, repoC: repoC, journal: journal, student: studentFac}
-
-	reader := bufio.NewReader(os.Stdin)
-
-	for {
-		fmt.Println("\nUNIVERSITY REGISTRATION")
-		fmt.Println("1. [Happy Path] (STUDENT_OK, CS201) -> A, B, C Commit")
-		fmt.Println("2. [Fail at A]  (STUDENT_FAIL) -> Rejects before commit")
-		fmt.Println("3. [Fail at B]  (FULL_COURSE)  -> 1-step rollback of A")
-		fmt.Println("4. [Fail at C]  (BROKE_STUDENT)-> 2-step rollback: B then A")
-		fmt.Println("5. [Inspect] View persisted state by ID")
-		fmt.Println("6. [Recover] Fix broken chains after reboot")
-		fmt.Println("7. [Reset] Wipe JSON stores & memory")
-		fmt.Println("0. Exit")
-		fmt.Print("Choice: ")
-
-		text, _ := reader.ReadString('\n')
-		switch strings.TrimSpace(text) {
-		case "1":
-			_ = studentFac.RegisterCourse("REG-01", "STUDENT_OK", "CS201", 3)
-		case "2":
-			_ = studentFac.RegisterCourse("REG-02", "STUDENT_FAIL", "CS201", 3)
-		case "3":
-			_ = studentFac.RegisterCourse("REG-03", "STUDENT_OK", "FULL_COURSE", 3)
-		case "4":
-			_ = studentFac.RegisterCourse("REG-04", "BROKE_STUDENT", "CS201", 3)
-		case "5":
-			fmt.Print("Enter ID to inspect (e.g. REG-01, REG-03, REG-04): ")
-			id, _ := reader.ReadString('\n')
-			adminFac.Inspect(strings.TrimSpace(id))
-		case "6":
-			adminFac.Recover()
-		case "7":
-			repoA.Clear()
-			repoB.Clear()
-			repoC.Clear()
-			journal.Clear()
-			allocB.Reset()
-			fmt.Println("All JSON files deleted and memory reset.")
-		case "0":
-			return
-		}
+	for _, s := range strats {
+		fmt.Printf("%-28T -> %.2f\n", s, s.Calculate(alice, credits))
 	}
+	fmt.Println("\n2. Manual Selection and Runtime Strategy Switching")
+	ctx := NewTuitionContext(&StandardTuition{})
+	fmt.Printf("Initial (Standard): %.2f\n", ctx.Execute(alice, credits))
+
+	ctx.SetStrategy(&ScholarshipTuition{})
+	fmt.Printf("After SetStrategy (Scholarship): %.2f\n", ctx.Execute(alice, credits))
+
+	fmt.Println("\n3. Automatic Strategy Selection via Selector")
+	selector := &TuitionSelector{rates: rates}
+	selectedStrategy := selector.Select(alice)
+	ctx.SetStrategy(selectedStrategy)
+	fmt.Printf("Selector assigned %T -> Total: %.2f\n", selectedStrategy, ctx.Execute(alice, credits))
+
+	fmt.Println("\n4. Strategy Family 2: Course Enrollment Priority")
+	pSel := &PrioritySelector{}
+	pCtx := NewPriorityContext(pSel.Select("REGULAR"))
+	fmt.Printf("Regular Registration Phase: %d points\n", pCtx.Execute(alice))
+
+	pCtx.SetStrategy(pSel.Select("GRADUATION"))
+	fmt.Printf("Graduation Deadline Phase:  %d points\n", pCtx.Execute(alice))
 }
