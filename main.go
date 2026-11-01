@@ -1,38 +1,104 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"sync"
+	"time"
+)
 
+type MedicalInspectionService struct {
+	rootTree *Club
+}
+
+func (m *MedicalInspectionService) OnEvent(e Event) {
+	if e.Type != EventInjury {
+		return
+	}
+	fmt.Printf("\nInjury detected for %s in team %s. Inspecting team...\n", e.Payload, e.TeamID)
+	var targetTeam *Team
+	for _, t := range m.rootTree.Teams {
+		if t.ID == e.TeamID {
+			targetTeam = t
+			break
+		}
+	}
+	if targetTeam != nil {
+		filter := &StarFilterVisitor{Threshold: 8.5}
+		targetTeam.Accept(filter)
+
+		salaryCalc := &SalaryCalculatorVisitor{}
+		targetTeam.Accept(salaryCalc)
+
+		fmt.Printf("Inspection Result: Target team %s has %d high-rated players. Payroll: $%.0f\n\n",
+			targetTeam.Name, len(filter.Found), salaryCalc.TotalSalary)
+	}
+}
 func main() {
-	rates := &SimulatedExchangeRateService{}
-	alice := Student{Name: "Alice", GPA: 3.6, Year: 4, IsInternational: false, HasScholarship: true}
-	credits := 5
-	fmt.Println("1. Single Input Processed by All Tuition Strategies")
-	strats := []TuitionStrategy{
-		&StandardTuition{},
-		&ScholarshipTuition{},
-		&InternationalTuition{rates: rates},
+	firstTeam := &Team{
+		ID:   "T1",
+		Name: "First Squad",
+		Members: []SportsElement{
+			&Forward{Name: "Haaland", Salary: 500000, Rating: 9.3, Goals: 30},
+			&Defender{Name: "Dias", Salary: 250000, Rating: 8.7, Tackles: 45},
+			&Goalkeeper{Name: "Ederson", Salary: 200000, Rating: 8.2, CleanSheet: 12},
+			&Coach{Name: "Guardiola", Salary: 600000, TacticsExp: 20},
+		},
 	}
-	for _, s := range strats {
-		fmt.Printf("%-28T -> %.2f\n", s, s.Calculate(alice, credits))
+	reserves := &Team{
+		ID:   "T2",
+		Name: "Reserves",
+		Members: []SportsElement{
+			&Forward{Name: "Bobb", Salary: 50000, Rating: 7.4, Goals: 4},
+		},
 	}
-	fmt.Println("\n2. Manual Selection and Runtime Strategy Switching")
-	ctx := NewTuitionContext(&StandardTuition{})
-	fmt.Printf("Initial (Standard): %.2f\n", ctx.Execute(alice, credits))
+	club := &Club{ID: "C1", Name: "Manchester City", Teams: []*Team{firstTeam, reserves}}
 
-	ctx.SetStrategy(&ScholarshipTuition{})
-	fmt.Printf("After SetStrategy (Scholarship): %.2f\n", ctx.Execute(alice, credits))
+	broker := NewEventBroker()
+	aggregatorBroker := NewEventBroker()
 
-	fmt.Println("\n3. Automatic Strategy Selection via Selector")
-	selector := &TuitionSelector{rates: rates}
-	selectedStrategy := selector.Select(alice)
-	ctx.SetStrategy(selectedStrategy)
-	fmt.Printf("Selector assigned %T -> Total: %.2f\n", selectedStrategy, ctx.Execute(alice, credits))
+	scoreboard := &Scoreboard{}
+	oddsCalc := &OddsCalculator{}
+	fantasy := &FantasyPointsTracker{}
+	push := &PushNotifier{}
+	aggregator := NewMatchAggregator(aggregatorBroker)
+	inspection := &MedicalInspectionService{rootTree: club}
 
-	fmt.Println("\n4. Strategy Family 2: Course Enrollment Priority")
-	pSel := &PrioritySelector{}
-	pCtx := NewPriorityContext(pSel.Select("REGULAR"))
-	fmt.Printf("Regular Registration Phase: %d points\n", pCtx.Execute(alice))
+	broker.Subscribe(EventGoal, scoreboard)
+	broker.Subscribe(EventGoal, oddsCalc)
+	broker.Subscribe(EventGoal, fantasy)
+	broker.Subscribe(EventGoal, push)
+	broker.Subscribe(EventGoal, aggregator)
 
-	pCtx.SetStrategy(pSel.Select("GRADUATION"))
-	fmt.Printf("Graduation Deadline Phase:  %d points\n", pCtx.Execute(alice))
+	broker.Subscribe(EventInjury, push)
+	broker.Subscribe(EventInjury, inspection)
+
+	aggregatorBroker.Subscribe(EventAggregated, push)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		broker.Notify(Event{Type: EventGoal, ClubID: "C1", TeamID: "T1", Payload: "Haaland 12'"})
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		broker.Notify(Event{Type: EventMatchCard, ClubID: "C1", TeamID: "T1", Payload: "Yellow card Dias"})
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		broker.Notify(Event{Type: EventInjury, ClubID: "C1", TeamID: "T1", Payload: "Haaland"})
+	}()
+
+	<-ctx.Done()
+	wg.Wait()
+	fmt.Println("All producer events completed gracefully.")
 }
