@@ -2,12 +2,42 @@ package main
 
 import "fmt"
 
+type SportsVisitor interface {
+	VisitClub(c *Club)
+	VisitTeam(t *Team)
+	VisitForward(f *Forward)
+	VisitDefender(d *Defender)
+	VisitGoalkeeper(g *Goalkeeper)
+	VisitCoach(c *Coach)
+}
+
+// Вспомогательная функция обхода состава команды посетителем
+func traverseTeam(v SportsVisitor, t *Team) {
+	for _, f := range t.Forwards {
+		f.Accept(v)
+	}
+	for _, d := range t.Defenders {
+		d.Accept(v)
+	}
+	for _, g := range t.Goalkeepers {
+		g.Accept(v)
+	}
+	for _, c := range t.Coaches {
+		c.Accept(v)
+	}
+}
+
+// 1. Числовой расчет: суммарный зарплатный фонд
 type SalaryCalculatorVisitor struct {
 	TotalSalary float64
 }
 
-func (v *SalaryCalculatorVisitor) VisitClub(c *Club)         {}
-func (v *SalaryCalculatorVisitor) VisitTeam(t *Team)         {}
+func (v *SalaryCalculatorVisitor) VisitClub(c *Club) {
+	for _, team := range c.Teams {
+		team.Accept(v)
+	}
+}
+func (v *SalaryCalculatorVisitor) VisitTeam(t *Team)         { traverseTeam(v, t) }
 func (v *SalaryCalculatorVisitor) VisitForward(f *Forward)   { v.TotalSalary += f.Salary }
 func (v *SalaryCalculatorVisitor) VisitDefender(d *Defender) { v.TotalSalary += d.Salary }
 func (v *SalaryCalculatorVisitor) VisitGoalkeeper(g *Goalkeeper) {
@@ -15,22 +45,31 @@ func (v *SalaryCalculatorVisitor) VisitGoalkeeper(g *Goalkeeper) {
 }
 func (v *SalaryCalculatorVisitor) VisitCoach(c *Coach) { v.TotalSalary += c.Salary }
 
+// 2. Аккумулятор состояния: средний рейтинг полевых игроков
 type RatingAccumulatorVisitor struct {
 	totalRating float64
 	count       int
 }
 
-func (v *RatingAccumulatorVisitor) VisitClub(c *Club)             {}
-func (v *RatingAccumulatorVisitor) VisitTeam(t *Team)             {}
-func (v *RatingAccumulatorVisitor) VisitForward(f *Forward)       { v.add(f.Rating) }
-func (v *RatingAccumulatorVisitor) VisitDefender(d *Defender)     { v.add(d.Rating) }
-func (v *RatingAccumulatorVisitor) VisitGoalkeeper(g *Goalkeeper) { v.add(g.Rating) }
-func (v *RatingAccumulatorVisitor) VisitCoach(c *Coach)           {}
-
-func (v *RatingAccumulatorVisitor) add(r float64) {
-	v.totalRating += r
+func (v *RatingAccumulatorVisitor) VisitClub(c *Club) {
+	for _, team := range c.Teams {
+		team.Accept(v)
+	}
+}
+func (v *RatingAccumulatorVisitor) VisitTeam(t *Team) { traverseTeam(v, t) }
+func (v *RatingAccumulatorVisitor) VisitForward(f *Forward) {
+	v.totalRating += f.Rating
 	v.count++
 }
+func (v *RatingAccumulatorVisitor) VisitDefender(d *Defender) {
+	v.totalRating += d.Rating
+	v.count++
+}
+func (v *RatingAccumulatorVisitor) VisitGoalkeeper(g *Goalkeeper) {
+	v.totalRating += g.Rating
+	v.count++
+}
+func (v *RatingAccumulatorVisitor) VisitCoach(c *Coach) {} // Тренер не учитывается
 
 func (v *RatingAccumulatorVisitor) AverageRating() float64 {
 	if v.count == 0 {
@@ -39,63 +78,80 @@ func (v *RatingAccumulatorVisitor) AverageRating() float64 {
 	return v.totalRating / float64(v.count)
 }
 
+// 3. Фильтрация: отбор звезд состава
 type StarFilterVisitor struct {
 	Threshold float64
-	Found     []SportsElement
+	Found     []string
 }
 
-func (v *StarFilterVisitor) VisitClub(c *Club) {}
-func (v *StarFilterVisitor) VisitTeam(t *Team) {}
+func (v *StarFilterVisitor) VisitClub(c *Club) {
+	for _, team := range c.Teams {
+		team.Accept(v)
+	}
+}
+func (v *StarFilterVisitor) VisitTeam(t *Team) { traverseTeam(v, t) }
 func (v *StarFilterVisitor) VisitForward(f *Forward) {
 	if f.Rating >= v.Threshold {
-		v.Found = append(v.Found, f)
+		v.Found = append(v.Found, f.Name)
 	}
 }
 func (v *StarFilterVisitor) VisitDefender(d *Defender) {
 	if d.Rating >= v.Threshold {
-		v.Found = append(v.Found, d)
+		v.Found = append(v.Found, d.Name)
 	}
 }
 func (v *StarFilterVisitor) VisitGoalkeeper(g *Goalkeeper) {
 	if g.Rating >= v.Threshold {
-		v.Found = append(v.Found, g)
+		v.Found = append(v.Found, g.Name)
 	}
 }
 func (v *StarFilterVisitor) VisitCoach(c *Coach) {}
 
+// 4. Экспорт в JSON с сохранением вложенности
 type JsonExportVisitor struct {
 	result string
 }
 
 func (v *JsonExportVisitor) VisitClub(c *Club) {
 	v.result += fmt.Sprintf(`{"club":"%s","teams":[`, c.Name)
+	for i, team := range c.Teams {
+		if i > 0 {
+			v.result += ","
+		}
+		team.Accept(v)
+	}
+	v.result += "]}"
 }
+
 func (v *JsonExportVisitor) VisitTeam(t *Team) {
-	if v.result[len(v.result)-1] != '[' {
-		v.result += ","
-	}
 	v.result += fmt.Sprintf(`{"team":"%s","members":[`, t.Name)
-}
-func (v *JsonExportVisitor) VisitForward(f *Forward) {
-	v.appendLeaf(fmt.Sprintf(`{"type":"Forward","name":"%s","salary":%.0f,"rating":%.1f}`, f.Name, f.Salary, f.Rating))
-}
-func (v *JsonExportVisitor) VisitDefender(d *Defender) {
-	v.appendLeaf(fmt.Sprintf(`{"type":"Defender","name":"%s","salary":%.0f,"rating":%.1f}`, d.Name, d.Salary, d.Rating))
-}
-func (v *JsonExportVisitor) VisitGoalkeeper(g *Goalkeeper) {
-	v.appendLeaf(fmt.Sprintf(`{"type":"Goalkeeper","name":"%s","salary":%.0f,"rating":%.1f}`, g.Name, g.Salary, g.Rating))
-}
-func (v *JsonExportVisitor) VisitCoach(c *Coach) {
-	v.appendLeaf(fmt.Sprintf(`{"type":"Coach","name":"%s","salary":%.0f}`, c.Name, c.Salary))
-}
-
-func (v *JsonExportVisitor) appendLeaf(jsonStr string) {
-	if v.result[len(v.result)-1] != '[' {
-		v.result += ","
+	first := true
+	appendItem := func(jsonStr string) {
+		if !first {
+			v.result += ","
+		}
+		v.result += jsonStr
+		first = false
 	}
-	v.result += jsonStr
+
+	for _, f := range t.Forwards {
+		appendItem(fmt.Sprintf(`{"type":"Forward","name":"%s"}`, f.Name))
+	}
+	for _, d := range t.Defenders {
+		appendItem(fmt.Sprintf(`{"type":"Defender","name":"%s"}`, d.Name))
+	}
+	for _, g := range t.Goalkeepers {
+		appendItem(fmt.Sprintf(`{"type":"Goalkeeper","name":"%s"}`, g.Name))
+	}
+	for _, c := range t.Coaches {
+		appendItem(fmt.Sprintf(`{"type":"Coach","name":"%s"}`, c.Name))
+	}
+	v.result += "]}"
 }
 
-func (v *JsonExportVisitor) Finalize() string {
-	return v.result + "]}]}"
-}
+func (v *JsonExportVisitor) VisitForward(f *Forward)       {}
+func (v *JsonExportVisitor) VisitDefender(d *Defender)     {}
+func (v *JsonExportVisitor) VisitGoalkeeper(g *Goalkeeper) {}
+func (v *JsonExportVisitor) VisitCoach(c *Coach)           {}
+
+func (v *JsonExportVisitor) Output() string { return v.result }

@@ -34,22 +34,28 @@ func (m *MedicalInspectionService) OnEvent(e Event) {
 			targetTeam.Name, len(filter.Found), salaryCalc.TotalSalary)
 	}
 }
-func main() {
+func main() { // Инициализация структуры данных в main.go
 	firstTeam := &Team{
 		ID:   "T1",
 		Name: "First Squad",
-		Members: []SportsElement{
-			&Forward{Name: "Haaland", Salary: 500000, Rating: 9.3, Goals: 30},
-			&Defender{Name: "Dias", Salary: 250000, Rating: 8.7, Tackles: 45},
-			&Goalkeeper{Name: "Ederson", Salary: 200000, Rating: 8.2, CleanSheet: 12},
-			&Coach{Name: "Guardiola", Salary: 600000, TacticsExp: 20},
+		Forwards: []*Forward{
+			{Name: "Haaland", Salary: 500000, Rating: 9.3, Goals: 30},
+		},
+		Defenders: []*Defender{
+			{Name: "Dias", Salary: 250000, Rating: 8.7, Tackles: 45},
+		},
+		Goalkeepers: []*Goalkeeper{
+			{Name: "Ederson", Salary: 200000, Rating: 8.2, CleanSheets: 12},
+		},
+		Coaches: []*Coach{
+			{Name: "Guardiola", Salary: 600000, TacticsExp: 20},
 		},
 	}
 	reserves := &Team{
 		ID:   "T2",
 		Name: "Reserves",
-		Members: []SportsElement{
-			&Forward{Name: "Bobb", Salary: 50000, Rating: 7.4, Goals: 4},
+		Forwards: []*Forward{
+			{Name: "Bobb", Salary: 50000, Rating: 7.4, Goals: 4},
 		},
 	}
 	club := &Club{ID: "C1", Name: "Manchester City", Teams: []*Team{firstTeam, reserves}}
