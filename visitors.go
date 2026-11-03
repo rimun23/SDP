@@ -11,7 +11,6 @@ type SportsVisitor interface {
 	VisitCoach(c *Coach)
 }
 
-// Вспомогательная функция обхода состава команды посетителем
 func traverseTeam(v SportsVisitor, t *Team) {
 	for _, f := range t.Forwards {
 		f.Accept(v)
@@ -27,7 +26,6 @@ func traverseTeam(v SportsVisitor, t *Team) {
 	}
 }
 
-// 1. Числовой расчет: суммарный зарплатный фонд
 type SalaryCalculatorVisitor struct {
 	TotalSalary float64
 }
@@ -45,7 +43,6 @@ func (v *SalaryCalculatorVisitor) VisitGoalkeeper(g *Goalkeeper) {
 }
 func (v *SalaryCalculatorVisitor) VisitCoach(c *Coach) { v.TotalSalary += c.Salary }
 
-// 2. Аккумулятор состояния: средний рейтинг полевых игроков
 type RatingAccumulatorVisitor struct {
 	totalRating float64
 	count       int
@@ -69,7 +66,7 @@ func (v *RatingAccumulatorVisitor) VisitGoalkeeper(g *Goalkeeper) {
 	v.totalRating += g.Rating
 	v.count++
 }
-func (v *RatingAccumulatorVisitor) VisitCoach(c *Coach) {} // Тренер не учитывается
+func (v *RatingAccumulatorVisitor) VisitCoach(c *Coach) {}
 
 func (v *RatingAccumulatorVisitor) AverageRating() float64 {
 	if v.count == 0 {
@@ -78,7 +75,6 @@ func (v *RatingAccumulatorVisitor) AverageRating() float64 {
 	return v.totalRating / float64(v.count)
 }
 
-// 3. Фильтрация: отбор звезд состава
 type StarFilterVisitor struct {
 	Threshold float64
 	Found     []string
@@ -107,7 +103,6 @@ func (v *StarFilterVisitor) VisitGoalkeeper(g *Goalkeeper) {
 }
 func (v *StarFilterVisitor) VisitCoach(c *Coach) {}
 
-// 4. Экспорт в JSON с сохранением вложенности
 type JsonExportVisitor struct {
 	result string
 }

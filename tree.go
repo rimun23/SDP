@@ -1,11 +1,8 @@
 package main
 
-// Интерфейс исключительно для реализации Double Dispatch в Visitor
 type Element interface {
 	Accept(v SportsVisitor)
 }
-
-// 2 Контейнера
 
 type Club struct {
 	ID    string
@@ -25,8 +22,6 @@ type Team struct {
 }
 
 func (t *Team) Accept(v SportsVisitor) { v.VisitTeam(t) }
-
-// 4 Листовых типа (только данные)
 
 type Forward struct {
 	Name   string

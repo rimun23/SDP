@@ -34,7 +34,7 @@ func (m *MedicalInspectionService) OnEvent(e Event) {
 			targetTeam.Name, len(filter.Found), salaryCalc.TotalSalary)
 	}
 }
-func main() { // Инициализация структуры данных в main.go
+func main() {
 	firstTeam := &Team{
 		ID:   "T1",
 		Name: "First Squad",
